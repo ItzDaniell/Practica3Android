@@ -10,9 +10,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 class MainViewModel: ViewModel() {
     val teacherList = MutableLiveData<List<TeacherResponse>>()
-
     val isLoading = MutableLiveData<Boolean>()
-
     val errorApi = MutableLiveData<String>()
 
     init {
@@ -24,15 +22,22 @@ class MainViewModel: ViewModel() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val call = getRetrofit().create(TeacherApi::class.java).getTeachers()
-                if(call.isSuccessful) {
-                    call.body()?.let {
+
+                if (call.isSuccessful) {
+                    call.body()?.let { response ->
                         isLoading.postValue(false)
-                        teacherList.postValue(it.results)
+                        teacherList.postValue(response.teachers)
+                    } ?: run {
+                        isLoading.postValue(false)
+                        errorApi.postValue("Response body is null")
                     }
+                } else {
+                    isLoading.postValue(false)
+                    errorApi.postValue("Error: ${call.code()} - ${call.message()}")
                 }
             } catch (e: Exception) {
-                errorApi.postValue(e.message)
                 isLoading.postValue(false)
+                errorApi.postValue("Network error: ${e.message}")
             }
         }
     }
